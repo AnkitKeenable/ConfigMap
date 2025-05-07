@@ -1,0 +1,6 @@
+<blueprint xmlns="http://camel.apache.org/schema/blueprint">
+    <route>
+        <from uri="http://example.com/api/{{api_version}}" />
+        <to uri="http://backend/{{endpoint_{{env}}}}" />
+    </route>
+</blueprint>
