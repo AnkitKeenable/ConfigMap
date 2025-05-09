@@ -51,3 +51,38 @@ public class ConfigMapGenerator {
         return value;
     }
 }
+
+
+/*
+Purpose: Generates Kubernetes ConfigMap YAML from validated properties
+
+Input:
+
+Properties from above
+
+Patterns from blueprint parser
+
+Output YAML:
+
+yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  labels:
+    generated-by: strict-configmap-generator
+data:
+  api_version: v1
+  app: inventory
+  env: prod
+  prod_inventory: "null"
+Special Handling:
+
+Escapes special characters in values
+
+Quotes null/empty values
+
+Maintains YAML syntax
+
+
+ */

@@ -5,21 +5,25 @@ import io.restassured.response.Response;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /*
 testGenerateConfigMapEndpoint()
-Tests the REST endpoint that generates ConfigMaps.
 
-blueprint: sample-blueprint.xml
+Tests the complete workflow via HTTP
 
-config: sample-dummy.cfg
+Verifies:
 
-HTTP 200 response
+Successful 200 response
 
-Response contains "kind: ConfigMap" and "data:"
+Proper YAML structure
 
+Contains required Kubernetes fields
 
+Uses classpath resources for blueprint and config
+
+Tests integration between components
  */
 
 @QuarkusTest
@@ -27,21 +31,19 @@ public class ConfigMapResourceTest {
 
     @Test
     public void testGenerateConfigMapEndpoint() {
-        String blueprint = "src/test/resources/sample-blueprint.xml";
-        String config = "src/test/resources/sample-dummy.cfg";
+        // Using classpath-relative paths
+        String blueprint = "sample-blueprint.xml";
+        String config = "sample-dummy.cfg";
 
-        Response response = given()
+        given()
                 .queryParam("blueprint", blueprint)
                 .queryParam("config", config)
                 .when()
                 .get("/configmap")
                 .then()
                 .statusCode(200)
-                .extract().response();
-
-        String yaml = response.asString();
-        assertTrue(yaml.contains("kind: ConfigMap"));
-        assertTrue(yaml.contains("data:"));
+                .body(containsString("kind: ConfigMap"))
+                .body(containsString("data:"));
     }
 }
 

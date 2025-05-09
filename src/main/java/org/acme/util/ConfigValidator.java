@@ -41,10 +41,26 @@ public class ConfigValidator {
 
     public static Properties readAndValidateDummyConfig(String filename, Map<String, String> keyPatterns) throws IOException {
         Properties props = new Properties();
-        try (InputStream input = new FileInputStream(filename)) {
-            props.load(input);
+        InputStream input = null;
+
+        // First try as filesystem path
+        File file = new File(filename);
+        if (file.exists()) {
+            input = new FileInputStream(file);
+        }
+        // Then try classpath resource
+        else {
+            input = ConfigValidator.class.getClassLoader().getResourceAsStream(filename);
+            if (input == null) {
+                throw new FileNotFoundException("Config file not found in filesystem or classpath: " + filename);
+            }
         }
 
+        try (InputStream is = input) {
+            props.load(is);
+        }
+
+        // Rest of your validation logic...
         Set<String> dummyKeys = props.stringPropertyNames();
         for (String key : dummyKeys) {
             if (!isKeyValid(key, keyPatterns, props)) {
@@ -79,3 +95,34 @@ public class ConfigValidator {
         return props;
     }
 }
+
+
+
+/*
+Purpose: Validates configuration properties against blueprint patterns
+
+Example Config (sample-config.properties):
+
+properties
+api_version=v1
+env=prod
+app=inventory
+Validation Process:
+
+Checks all keys match expected patterns from blueprint
+
+For nested patterns (env_ + app), verifies combined key exists (prod_inventory)
+
+Adds missing required keys with "null" values
+
+Replaces empty values with "null"
+
+Output Properties:
+
+properties
+api_version=v1
+env=prod
+app=inventory
+prod_inventory=null  // Auto-added missing resolved key
+
+ */

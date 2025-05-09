@@ -8,21 +8,35 @@ import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 /*
-In the Below I explain each testcase working
+Tests YAML ConfigMap generation:
 
 testGenerateConfigMapAsString()
-Text generate from Configmap YAML from properties
 
-patterns: {"key1": ""}
+Creates sample properties and patterns
 
-props: {key1=value1}
+Verifies the generated YAML contains:
 
+The key-value pair
+
+Required Kubernetes fields
+
+Tests basic YAML generation
+
+testEscapeYamlValueWithSpecialChars()
+
+Tests escaping of special characters in YAML values
+
+Verifies colons and hashes are properly quoted
+
+Ensures safe YAML output formatting
 
 testEscapeYamlValueEmpty()
 
-Tests handling of empty values in YAML generation.
+Tests handling of empty values
 
- Tests handling of empty values in YAML generation.
+Verifies empty strings become quoted "null"
+
+Ensures proper YAML syntax for empty values
  */
 class ConfigMapGeneratorTest {
 

@@ -1,144 +1,194 @@
+
+
 package org.acme.unit;
 
 import org.acme.util.ConfigValidator;
 import org.junit.jupiter.api.Test;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+
 /*
+Tests configuration validation logic:
 
-testValidSimpleKey()
-Tests validation of simple property keys.
-patterns: {"simpleKey": ""}
-props: {simpleKey=value}
- Returns true (valid)
+testMissingKey()
 
+Tests handling of missing required keys
 
-testInvalidKeyNotInPatterns()
-Tests detection of unknown property keys.
-patterns: {"expectedKey": ""}
-props: {unknownKey=value}
+Verifies missing keys are added with "null" values
 
+Existing keys remain unchanged
 
-testResolvedKeyValidationSuccess()
-Tests successful validation of resolved nested keys.
-patterns: {"url_": "env"}
-props: {env=dev, url_dev=http://localhost}
+testEmptyKey()
 
+Tests handling of empty values
 
-testReadAndValidateDummyConfigMissingKey()
- Tests handling of missing required keys in config files.
-File content: anotherKey=123
-patterns: {"requiredKey": null}
+Verifies empty values are normalized to "null"
+
+Other values remain intact
+
+testMissingResolvedKey()
+
+Tests nested placeholder resolution
+
+Verifies missing resolved keys are created
+
+Checks base values are preserved
+
+testUnusedKey()
+
+Tests handling of extra configuration keys
+
+Verifies unrelated keys pass through unchanged
+
+Ensures no false validation failures
+
+Additional Edge Case Tests:
+
+testInvalidKeyWithMissingInnerValue: Tests invalid nested patterns
+
+testNonExistentFile: Tests file not found handling
+
+testKeyValidationWithMissingInnerValue: Tests validation logic
+
+testInvalidResolvedKey: Tests pattern matching failures
+
 
  */
-
 class ConfigValidatorTest {
 
-    @Test
-    void testValidSimpleKey() {
-        Map<String, String> patterns = Map.of("simpleKey", "");  // Use empty string instead of null
-        Properties props = new Properties();
-        props.setProperty("simpleKey", "value");
-
-        assertTrue(ConfigValidator.isKeyValid("simpleKey", patterns, props));
+    private File createTempConfigFile(String content) throws Exception {
+        File tempFile = File.createTempFile("test-config", ".properties");
+        try (FileWriter writer = new FileWriter(tempFile)) {
+            writer.write(content);
+        }
+        return tempFile;
     }
 
     @Test
-    void testInvalidKeyNotInPatterns() {
-        Map<String, String> patterns = Map.of("expectedKey", "");  // Explicitly define known keys
-        Properties props = new Properties();
-        props.setProperty("unknownKey", "value");
+    void testMissingKey() throws Exception {
+        String cfg = "key2=value2\n";
+        File file = createTempConfigFile(cfg);
 
-        assertFalse(ConfigValidator.isKeyValid("unknownKey", patterns, props));
+        try {
+            Map<String, String> keyPatterns = new HashMap<>();
+            keyPatterns.put("key1", null);
+
+            Properties props = ConfigValidator.readAndValidateDummyConfig(file.getAbsolutePath(), keyPatterns);
+
+            assertTrue(props.containsKey("key1"));
+            assertEquals("null", props.getProperty("key1"));
+            assertEquals("value2", props.getProperty("key2"));
+        } finally {
+            file.delete();
+        }
     }
 
     @Test
-    void testResolvedKeyValidationSuccess() {
-        Map<String, String> patterns = Map.of("url_", "env");
+    void testEmptyKey() throws Exception {
+        String cfg = "key1=\nkey2=value2\n";
+        File file = createTempConfigFile(cfg);
+
+        try {
+            Map<String, String> keyPatterns = new HashMap<>();
+            keyPatterns.put("key1", null);
+
+            Properties props = ConfigValidator.readAndValidateDummyConfig(file.getAbsolutePath(), keyPatterns);
+
+            assertEquals("null", props.getProperty("key1"));
+            assertEquals("value2", props.getProperty("key2"));
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    void testMissingResolvedKey() throws Exception {
+        String cfg = "env=dev\nkey2=value2\n";
+        File file = createTempConfigFile(cfg);
+
+        try {
+            Map<String, String> keyPatterns = new HashMap<>();
+            keyPatterns.put("key_", "env");
+
+            Properties props = ConfigValidator.readAndValidateDummyConfig(file.getAbsolutePath(), keyPatterns);
+
+            assertEquals("dev", props.getProperty("env"));
+            assertTrue(props.containsKey("key_dev"));
+            assertEquals("null", props.getProperty("key_dev"));
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    void testUnusedKey() throws Exception {
+        String cfg = "keyX=valueX\n";
+        File file = createTempConfigFile(cfg);
+
+        try {
+            Map<String, String> keyPatterns = new HashMap<>();
+
+            Properties props = ConfigValidator.readAndValidateDummyConfig(file.getAbsolutePath(), keyPatterns);
+
+            assertEquals("valueX", props.getProperty("keyX"));
+        } finally {
+            file.delete();
+        }
+    }
+
+
+
+    @Test
+    void testInvalidKeyWithMissingInnerValue() throws Exception {
+        String cfg = "base_abc=value\n"; // Missing 'env' property
+        File file = createTempConfigFile(cfg);
+
+        try {
+            Map<String, String> keyPatterns = new HashMap<>();
+            keyPatterns.put("base_", "env"); // Requires env property
+
+            Properties props = ConfigValidator.readAndValidateDummyConfig(file.getAbsolutePath(), keyPatterns);
+
+            // Should print warning about missing inner key
+            assertTrue(props.containsKey("base_abc"));
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
+    void testNonExistentFile() {
+        assertThrows(FileNotFoundException.class, () -> {
+            ConfigValidator.readAndValidateDummyConfig("nonexistent.file", new HashMap<>());
+        });
+    }
+
+    @Test
+    void testKeyValidationWithMissingInnerValue() {
+        Map<String, String> keyPatterns = new HashMap<>();
+        keyPatterns.put("base_", "env");
+
+        Properties props = new Properties();
+        props.setProperty("base_test", "value");
+
+        // Should print warning about missing 'env' property but return true
+        assertTrue(ConfigValidator.isKeyValid("base_test", keyPatterns, props));
+    }
+
+    @Test
+    void testInvalidResolvedKey() {
         Properties props = new Properties();
         props.setProperty("env", "dev");
-        props.setProperty("url_dev", "http://localhost");
 
-        assertTrue(ConfigValidator.isKeyValid("url_dev", patterns, props));
+        // Key doesn't match the expected pattern
+        assertFalse(ConfigValidator.isValidResolvedKey("wrong_dev", "key_", "env", props));
     }
-
-    @Test
-    void testResolvedKeyValidationFailure() {
-        Map<String, String> patterns = Map.of("url_", "env");
-        Properties props = new Properties();
-        props.setProperty("env", "prod");
-        props.setProperty("url_test", "wrong value");
-
-        assertFalse(ConfigValidator.isKeyValid("url_test", patterns, props));
-    }
-    @Test
-    void testKeyValidationWhenSuffixIsMissing() {
-        Map<String, String> patterns = Map.of("url_", "env");
-        Properties props = new Properties(); // Missing 'env'
-
-        assertTrue(ConfigValidator.isKeyValid("url_test", patterns, props)); // Will warn, but return true
-    }
-
-    @Test
-    void testIsValidResolvedKeyWithMissingSuffix() {
-        Map<String, String> patterns = Map.of("url_", "env");
-        Properties props = new Properties(); // Missing 'env'
-
-        assertFalse(ConfigValidator.isValidResolvedKey("url_dev", "url_", "env", props));
-    }
-
-    @Test
-    void testReadAndValidateDummyConfigMissingKey() throws IOException {
-        File temp = File.createTempFile("dummy", ".cfg");
-        Files.writeString(temp.toPath(), """
-        anotherKey=123
-    """);
-
-        Map<String, String> patterns = new HashMap<>();
-        patterns.put("requiredKey", null); // Map.of doesn't support null
-
-        Properties props = ConfigValidator.readAndValidateDummyConfig(temp.getAbsolutePath(), patterns);
-
-        assertEquals("null", props.getProperty("requiredKey")); // Missing key should be added as "null"
-        temp.deleteOnExit();
-    }
-
-    @Test
-    void testReadAndValidateDummyConfigEmptyKey() throws IOException {
-        File temp = File.createTempFile("dummy", ".cfg");
-        Files.writeString(temp.toPath(), """
-        requiredKey=
-    """);
-
-        Map<String, String> patterns = new HashMap<>();
-        patterns.put("requiredKey", null); // Map.of doesn't support null
-
-        Properties props = ConfigValidator.readAndValidateDummyConfig(temp.getAbsolutePath(), patterns);
-
-        assertEquals("null", props.getProperty("requiredKey")); // Empty value replaced with "null"
-        temp.deleteOnExit();
-    }
-
-    @Test
-    void testReadAndValidateDummyConfigMissingResolvedKey() throws IOException {
-        File temp = File.createTempFile("dummy", ".cfg");
-        Files.writeString(temp.toPath(), """
-            env=prod
-        """);
-
-        Map<String, String> patterns = Map.of(
-                "url_", "env"
-        );
-
-        Properties props = ConfigValidator.readAndValidateDummyConfig(temp.getAbsolutePath(), patterns);
-
-        assertEquals("null", props.getProperty("url_prod")); // auto-added resolved key
-        temp.deleteOnExit();
-    }
-
 }
