@@ -65,6 +65,33 @@ public class BlueprintParser {
             patterns.put(baseKey, innerKey);
         }
     }
+    public static Map<String, String> extractKeyPatternsFromStream(InputStream is) throws Exception {
+        Map<String, String> patterns = new HashMap<>();
+        Set<String> simpleKeys = new HashSet<>();
+
+        Document doc = DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder()
+                .parse(is);
+
+        XPath xpath = XPathFactory.newInstance().newXPath();
+        NodeList endpoints = (NodeList) xpath.evaluate("//from/@uri|//to/@uri", doc, XPathConstants.NODESET);
+
+        for (int i = 0; i < endpoints.getLength(); i++) {
+            String uri = endpoints.item(i).getNodeValue();
+            Matcher protocolMatcher = Pattern.compile("^([a-z]+):", Pattern.CASE_INSENSITIVE).matcher(uri);
+
+            if (!protocolMatcher.find() || !IGNORED_PROTOCOLS.contains(protocolMatcher.group(1).toLowerCase())) {
+                extractPlaceholderPatterns(uri, patterns, simpleKeys);
+            }
+        }
+
+        // Add simple keys to patterns map with null pattern
+        for (String key : simpleKeys) {
+            patterns.put(key, null);
+        }
+
+        return patterns;
+    }
 }
 
 

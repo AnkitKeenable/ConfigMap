@@ -38,7 +38,41 @@ public class ConfigValidator {
 
         return key.equals(baseKey + expectedSuffix);
     }
+    public static Properties validateProperties(Properties props, Map<String, String> keyPatterns) {
+        // Rest of your validation logic...
+        Set<String> dummyKeys = props.stringPropertyNames();
+        for (String key : dummyKeys) {
+            if (!isKeyValid(key, keyPatterns, props)) {
+                System.out.println("Info: Ignoring key '" + key + "' as it's not part of any endpoint definition");
+            }
+        }
 
+        for (Map.Entry<String, String> entry : keyPatterns.entrySet()) {
+            String baseKey = entry.getKey();
+            String innerKey = entry.getValue();
+
+            if (innerKey == null) {
+                if (!props.containsKey(baseKey)) {
+                    System.err.println("Warning: Missing required key '" + baseKey + "'");
+                    props.setProperty(baseKey, "null");
+                } else if (props.getProperty(baseKey).trim().isEmpty()) {
+                    System.err.println("Warning: Empty value for key '" + baseKey + "', setting to 'null'");
+                    props.setProperty(baseKey, "null");
+                }
+            } else {
+                boolean hasValidResolved = props.stringPropertyNames().stream()
+                        .anyMatch(k -> isValidResolvedKey(k, baseKey, innerKey, props));
+
+                if (!hasValidResolved) {
+                    System.err.println("Warning: Missing valid resolved key for pattern '" + baseKey + "{{" + innerKey + "}}'");
+                    String resolvedKey = baseKey + props.getProperty(innerKey, "default");
+                    props.setProperty(resolvedKey, "null");
+                }
+            }
+        }
+
+        return props;
+    }
     public static Properties readAndValidateDummyConfig(String filename, Map<String, String> keyPatterns) throws IOException {
         Properties props = new Properties();
         InputStream input = null;

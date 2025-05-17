@@ -1,0 +1,432 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="en">-->
+<!--<head>-->
+<!--    <meta charset="UTF-8" />-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>-->
+<!--    <title>ConfigMap Generator</title>-->
+<!--    <style>-->
+<!--        * {-->
+<!--          margin: 0;-->
+<!--          padding: 0;-->
+<!--          box-sizing: border-box;-->
+<!--        }-->
+
+<!--        html, body {-->
+<!--          height: 100%;-->
+<!--          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;-->
+<!--          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);-->
+<!--          color: #fff;-->
+<!--          display: flex;-->
+<!--          align-items: center;-->
+<!--          justify-content: center;-->
+<!--          padding: 2rem;-->
+<!--          overflow: hidden;-->
+<!--        }-->
+
+<!--        .container {-->
+<!--          background: rgba(255, 255, 255, 0.05);-->
+<!--          border: 1px solid rgba(255, 255, 255, 0.1);-->
+<!--          backdrop-filter: blur(20px);-->
+<!--          border-radius: 20px;-->
+<!--          padding: 2.5rem;-->
+<!--          width: 100%;-->
+<!--          max-width: 500px;-->
+<!--          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);-->
+<!--          animation: fadeIn 1s ease;-->
+<!--        }-->
+
+<!--        h1 {-->
+<!--          text-align: center;-->
+<!--          margin-bottom: 2rem;-->
+<!--          font-size: 2rem;-->
+<!--          color: #00eaff;-->
+<!--          text-shadow: 0 0 10px rgba(0, 234, 255, 0.5);-->
+<!--        }-->
+
+<!--        label {-->
+<!--          display: block;-->
+<!--          margin-bottom: 0.5rem;-->
+<!--          font-weight: 600;-->
+<!--          color: #cceeff;-->
+<!--        }-->
+
+<!--        input[type="file"],-->
+<!--        input[type="text"] {-->
+<!--          width: 100%;-->
+<!--          padding: 0.6rem;-->
+<!--          margin-bottom: 1.5rem;-->
+<!--          border: 1px solid rgba(255, 255, 255, 0.2);-->
+<!--          border-radius: 10px;-->
+<!--          background-color: rgba(255, 255, 255, 0.05);-->
+<!--          color: #fff;-->
+<!--        }-->
+
+<!--        input[type="file"]::file-selector-button {-->
+<!--          background-color: #00eaff;-->
+<!--          border: none;-->
+<!--          padding: 0.4rem 1rem;-->
+<!--          color: #000;-->
+<!--          border-radius: 6px;-->
+<!--          cursor: pointer;-->
+<!--        }-->
+
+<!--        button {-->
+<!--          width: 100%;-->
+<!--          padding: 0.75rem;-->
+<!--          border: none;-->
+<!--          border-radius: 12px;-->
+<!--          background: linear-gradient(135deg, #00eaff, #00c6ff);-->
+<!--          color: #000;-->
+<!--          font-weight: bold;-->
+<!--          font-size: 1.1rem;-->
+<!--          cursor: pointer;-->
+<!--          box-shadow: 0 0 15px #00eaff;-->
+<!--          transition: all 0.4s ease;-->
+<!--        }-->
+
+<!--        button:hover {-->
+<!--          background: linear-gradient(135deg, #00bcd4, #0097a7);-->
+<!--          transform: scale(1.03);-->
+<!--        }-->
+
+<!--        #status {-->
+<!--          margin-top: 1.2rem;-->
+<!--          text-align: center;-->
+<!--          font-style: italic;-->
+<!--          color: #b2fffd;-->
+<!--          display: none;-->
+<!--        }-->
+
+<!--        /* Modal Styles */-->
+<!--        .modal {-->
+<!--          position: fixed;-->
+<!--          top: 0; left: 0;-->
+<!--          width: 100%; height: 100%;-->
+<!--          background-color: rgba(0,0,0,0.7);-->
+<!--          display: none;-->
+<!--          align-items: center;-->
+<!--          justify-content: center;-->
+<!--          z-index: 1000;-->
+<!--        }-->
+
+<!--        .modal-content {-->
+<!--          background: rgba(255, 255, 255, 0.1);-->
+<!--          padding: 2rem;-->
+<!--          border-radius: 15px;-->
+<!--          width: 90%;-->
+<!--          max-width: 400px;-->
+<!--          text-align: center;-->
+<!--          backdrop-filter: blur(15px);-->
+<!--          animation: fadeIn 0.4s ease-in-out;-->
+<!--        }-->
+
+<!--        .modal-content input[type="text"] {-->
+<!--          margin-top: 1rem;-->
+<!--        }-->
+
+<!--        .modal-buttons {-->
+<!--          margin-top: 1rem;-->
+<!--          display: flex;-->
+<!--          justify-content: space-between;-->
+<!--          gap: 10px;-->
+<!--        }-->
+
+<!--        .modal-buttons button {-->
+<!--          flex: 1;-->
+<!--        }-->
+
+<!--        @keyframes fadeIn {-->
+<!--          from { opacity: 0; transform: scale(0.9); }-->
+<!--          to { opacity: 1; transform: scale(1); }-->
+<!--        }-->
+<!--    </style>-->
+
+<!--    <script>-->
+<!--        let formData = null;-->
+
+<!--        function handleSubmit(event) {-->
+<!--          event.preventDefault();-->
+<!--          formData = new FormData(event.target);-->
+
+<!--          document.getElementById("customNameModal").style.display = "flex";-->
+<!--        }-->
+
+<!--        function submitWithName(useDefault = false) {-->
+<!--          const modal = document.getElementById("customNameModal");-->
+<!--          const inputName = document.getElementById("filenameInput").value.trim();-->
+
+<!--          const fileName = (!useDefault && inputName) ? inputName : "configMap.yaml";-->
+<!--          const hiddenInput = document.createElement("input");-->
+<!--          hiddenInput.type = "hidden";-->
+<!--          hiddenInput.name = "customFileName";-->
+<!--          hiddenInput.value = fileName;-->
+<!--          document.getElementById("uploadForm").appendChild(hiddenInput);-->
+
+<!--          modal.style.display = "none";-->
+<!--          document.getElementById("status").style.display = "block";-->
+<!--          document.getElementById("status").textContent = `🚀 Generating ${fileName}...`;-->
+
+<!--          // Trigger download via iframe-->
+<!--          const iframe = document.createElement("iframe");-->
+<!--          iframe.name = "hiddenDownloadFrame";-->
+<!--          iframe.style.display = "none";-->
+<!--          document.body.appendChild(iframe);-->
+<!--          const form = document.getElementById("uploadForm");-->
+<!--          form.target = "hiddenDownloadFrame";-->
+<!--          form.submit();-->
+
+<!--          setTimeout(() => {-->
+<!--            form.reset();-->
+<!--            document.getElementById("status").textContent = "✅ Done! Reloading...";-->
+<!--            setTimeout(() => location.reload(), 1500);-->
+<!--          }, 3000);-->
+<!--        }-->
+<!--    </script>-->
+<!--</head>-->
+
+<!--<body>-->
+<!--<div class="container">-->
+<!--    <h1>⚙️ ConfigMap Generator</h1>-->
+<!--    <form id="uploadForm" action="/configmap/upload" method="post" enctype="multipart/form-data" onsubmit="handleSubmit(event)">-->
+<!--        <label for="blueprint">📄 Blueprint XML File</label>-->
+<!--        <input type="file" id="blueprint" name="blueprint" accept=".xml" required />-->
+
+<!--        <label for="config">🧾 Config Properties File</label>-->
+<!--        <input type="file" id="config" name="config" accept=".cfg,.properties" required />-->
+
+<!--        <button type="submit">✨ Generate ConfigMap</button>-->
+<!--        <div id="status"></div>-->
+<!--    </form>-->
+<!--</div>-->
+
+<!--&lt;!&ndash; Modal &ndash;&gt;-->
+<!--<div id="customNameModal" class="modal">-->
+<!--    <div class="modal-content">-->
+<!--        <h2>📝 Enter Filename</h2>-->
+<!--        <p>Give your ConfigMap a name (without extension):</p>-->
+<!--        <input type="text" id="filenameInput" placeholder="e.g. my-custom-config" />-->
+<!--        <div class="modal-buttons">-->
+<!--            <button onclick="submitWithName(false)">Continue</button>-->
+<!--            <button onclick="submitWithName(true)">Skip (Use Default)</button>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+<!--</body>-->
+<!--</html>-->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ConfigMap Generator</title>
+    <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+
+        html, body {
+          height: 100%;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          overflow: hidden;
+        }
+
+        .container {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(20px);
+          border-radius: 20px;
+          padding: 2.5rem;
+          width: 100%;
+          max-width: 500px;
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+          animation: fadeIn 1s ease;
+        }
+
+        h1 {
+          text-align: center;
+          margin-bottom: 2rem;
+          font-size: 2rem;
+          color: #00eaff;
+          text-shadow: 0 0 10px rgba(0, 234, 255, 0.5);
+        }
+
+        label {
+          display: block;
+          margin-bottom: 0.5rem;
+          font-weight: 600;
+          color: #cceeff;
+        }
+
+        input[type="file"] {
+          width: 100%;
+          padding: 0.6rem;
+          margin-bottom: 1.5rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          background-color: rgba(255, 255, 255, 0.05);
+          color: #fff;
+        }
+
+        input[type="file"]::file-selector-button {
+          background-color: #00eaff;
+          border: none;
+          padding: 0.4rem 1rem;
+          color: #000;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+
+        button {
+          width: 100%;
+          padding: 0.75rem;
+          border: none;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #00eaff, #00c6ff);
+          color: #000;
+          font-weight: bold;
+          font-size: 1.1rem;
+          cursor: pointer;
+          box-shadow: 0 0 15px #00eaff;
+          transition: all 0.4s ease;
+        }
+
+        button:hover {
+          background: linear-gradient(135deg, #00bcd4, #0097a7);
+          transform: scale(1.03);
+        }
+
+        #status {
+          margin-top: 1.2rem;
+          text-align: center;
+          font-style: italic;
+          color: #b2fffd;
+          display: none;
+        }
+
+        .modal {
+          position: fixed;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          background-color: rgba(0,0,0,0.7);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .modal-content {
+          background: rgba(255, 255, 255, 0.1);
+          padding: 2rem;
+          border-radius: 15px;
+          width: 90%;
+          max-width: 400px;
+          text-align: center;
+          backdrop-filter: blur(15px);
+          animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .modal-content input[type="text"] {
+          margin-top: 1rem;
+          width: 100%;
+          padding: 0.6rem;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          background-color: rgba(255, 255, 255, 0.05);
+          color: #fff;
+        }
+
+        .modal-buttons {
+          margin-top: 1rem;
+          display: flex;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .modal-buttons button {
+          flex: 1;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+
+    <script>
+        function handleSubmit(event) {
+            event.preventDefault();
+            document.getElementById("customNameModal").style.display = "flex";
+        }
+
+        function generateConfigMaps(useDefault = false) {
+            const modal = document.getElementById("customNameModal");
+            const inputName = document.getElementById("folderNameInput").value.trim();
+            const folderName = (!useDefault && inputName) ? inputName : "configmaps";
+
+            const hiddenInput = document.createElement("input");
+            hiddenInput.type = "hidden";
+            hiddenInput.name = "folderName";
+            hiddenInput.value = folderName;
+            document.getElementById("uploadForm").appendChild(hiddenInput);
+
+            modal.style.display = "none";
+            document.getElementById("status").style.display = "block";
+            document.getElementById("status").textContent = `🚀 Generating ${folderName}.zip...`;
+
+            // Trigger download via iframe
+            const iframe = document.createElement("iframe");
+            iframe.name = "hiddenDownloadFrame";
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+            const form = document.getElementById("uploadForm");
+            form.target = "hiddenDownloadFrame";
+            form.submit();
+
+            setTimeout(() => {
+                form.reset();
+                document.getElementById("status").textContent = "✅ Done! Reloading...";
+                setTimeout(() => location.reload(), 1500);
+            }, 3000);
+        }
+    </script>
+</head>
+
+<body>
+<div class="container">
+    <h1>⚙️ ConfigMap Generator</h1>
+    <form id="uploadForm" action="/configmap/upload" method="post" enctype="multipart/form-data" onsubmit="handleSubmit(event)">
+        <label for="xmlDirectory">📁 XML Files Directory</label>
+        <input type="file" id="xmlDirectory" name="xmlDirectory" webkitdirectory directory multiple required />
+
+        <label for="config">🧾 Config Properties File</label>
+        <input type="file" id="config" name="config" accept=".cfg,.properties" required />
+
+        <button type="submit">✨ Generate ConfigMaps</button>
+        <div id="status"></div>
+    </form>
+</div>
+
+<!-- Modal -->
+<div id="customNameModal" class="modal">
+    <div class="modal-content">
+        <h2>📝 Enter Folder Name</h2>
+        <p>Name for the output folder:</p>
+        <input type="text" id="folderNameInput" placeholder="e.g. my-configmaps" />
+        <div class="modal-buttons">
+            <button onclick="generateConfigMaps(false)">Continue</button>
+            <button onclick="generateConfigMaps(true)">Use Default</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

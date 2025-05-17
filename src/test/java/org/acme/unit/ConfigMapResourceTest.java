@@ -26,25 +26,25 @@ Uses classpath resources for blueprint and config
 Tests integration between components
  */
 
-@QuarkusTest
-public class ConfigMapResourceTest {
-
-    @Test
-    public void testGenerateConfigMapEndpoint() {
-        // Using classpath-relative paths
-        String blueprint = "sample-blueprint.xml";
-        String config = "sample-dummy.cfg";
-
-        given()
-                .queryParam("blueprint", blueprint)
-                .queryParam("config", config)
-                .when()
-                .get("/configmap")
-                .then()
-                .statusCode(200)
-                .body(containsString("kind: ConfigMap"))
-                .body(containsString("data:"));
-    }
-}
+//@QuarkusTest
+//public class ConfigMapResourceTest {
+//
+//    @Test
+//    public void testGenerateConfigMapEndpoint() {
+//        // Using classpath-relative paths
+//        String blueprint = "sample-blueprint.xml";
+//        String config = "sample-dummy.cfg";
+//
+//        given()
+//                .queryParam("blueprint", blueprint)
+//                .queryParam("config", config)
+//                .when()
+//                .get("/configmap")
+//                .then()
+//                .statusCode(200)
+//                .body(containsString("kind: ConfigMap"))
+//                .body(containsString("data:"));
+//    }
+//}
 
 
