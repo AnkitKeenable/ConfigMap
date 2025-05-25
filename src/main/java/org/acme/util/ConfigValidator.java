@@ -1,11 +1,15 @@
 package org.acme.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 
 public class ConfigValidator {
-    // Make these methods public so they can be accessed by ConfigMapGenerator
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigValidator.class);
+
     public static boolean isKeyValid(String key, Map<String, String> keyPatterns, Properties props) {
         if (keyPatterns.containsKey(key)) return true;
 
@@ -16,13 +20,13 @@ public class ConfigValidator {
             if (innerKey != null && key.startsWith(baseKey)) {
                 String expectedSuffix = props.getProperty(innerKey);
                 if (expectedSuffix == null) {
-                    System.err.println("Warning: Cannot validate '" + key + "' - missing '" + innerKey + "' value");
+                    LOGGER.warn("Cannot validate key '{}' - missing '{}' value", key, innerKey);
                     return true;
                 }
                 if (key.equals(baseKey + expectedSuffix)) {
                     return true;
                 } else {
-                    System.err.println("Warning: Malformed key '" + key + "' - expected suffix '" + expectedSuffix + "'");
+                    LOGGER.warn("Malformed key '{}' - expected suffix '{}'", key, expectedSuffix);
                     return false;
                 }
             }
@@ -38,12 +42,12 @@ public class ConfigValidator {
 
         return key.equals(baseKey + expectedSuffix);
     }
+
     public static Properties validateProperties(Properties props, Map<String, String> keyPatterns) {
-        // Rest of your validation logic...
         Set<String> dummyKeys = props.stringPropertyNames();
         for (String key : dummyKeys) {
             if (!isKeyValid(key, keyPatterns, props)) {
-                System.out.println("Info: Ignoring key '" + key + "' as it's not part of any endpoint definition");
+                LOGGER.info("Ignoring key '{}' as it's not part of any endpoint definition", key);
             }
         }
 
@@ -53,10 +57,10 @@ public class ConfigValidator {
 
             if (innerKey == null) {
                 if (!props.containsKey(baseKey)) {
-                    System.err.println("Warning: Missing required key '" + baseKey + "'");
+                    LOGGER.warn("Missing required key '{}'", baseKey);
                     props.setProperty(baseKey, "null");
                 } else if (props.getProperty(baseKey).trim().isEmpty()) {
-                    System.err.println("Warning: Empty value for key '" + baseKey + "', setting to 'null'");
+                    LOGGER.warn("Empty value for key '{}', setting to 'null'", baseKey);
                     props.setProperty(baseKey, "null");
                 }
             } else {
@@ -64,7 +68,7 @@ public class ConfigValidator {
                         .anyMatch(k -> isValidResolvedKey(k, baseKey, innerKey, props));
 
                 if (!hasValidResolved) {
-                    System.err.println("Warning: Missing valid resolved key for pattern '" + baseKey + "{{" + innerKey + "}}'");
+                    LOGGER.warn("Missing valid resolved key for pattern '{}{{{}}}'", baseKey, innerKey);
                     String resolvedKey = baseKey + props.getProperty(innerKey, "default");
                     props.setProperty(resolvedKey, "null");
                 }
@@ -73,90 +77,29 @@ public class ConfigValidator {
 
         return props;
     }
+
     public static Properties readAndValidateDummyConfig(String filename, Map<String, String> keyPatterns) throws IOException {
         Properties props = new Properties();
         InputStream input = null;
 
-        // First try as filesystem path
         File file = new File(filename);
         if (file.exists()) {
             input = new FileInputStream(file);
-        }
-        // Then try classpath resource
-        else {
+            LOGGER.info("Reading config from filesystem: {}", filename);
+        } else {
             input = ConfigValidator.class.getClassLoader().getResourceAsStream(filename);
             if (input == null) {
+                LOGGER.error("Config file not found in filesystem or classpath: {}", filename);
                 throw new FileNotFoundException("Config file not found in filesystem or classpath: " + filename);
             }
+            LOGGER.info("Reading config from classpath resource: {}", filename);
         }
 
         try (InputStream is = input) {
             props.load(is);
         }
 
-        // Rest of your validation logic...
-        Set<String> dummyKeys = props.stringPropertyNames();
-        for (String key : dummyKeys) {
-            if (!isKeyValid(key, keyPatterns, props)) {
-                System.out.println("Info: Ignoring key '" + key + "' as it's not part of any endpoint definition");
-            }
-        }
-
-        for (Map.Entry<String, String> entry : keyPatterns.entrySet()) {
-            String baseKey = entry.getKey();
-            String innerKey = entry.getValue();
-
-            if (innerKey == null) {
-                if (!props.containsKey(baseKey)) {
-                    System.err.println("Warning: Missing required key '" + baseKey + "'");
-                    props.setProperty(baseKey, "null");
-                } else if (props.getProperty(baseKey).trim().isEmpty()) {
-                    System.err.println("Warning: Empty value for key '" + baseKey + "', setting to 'null'");
-                    props.setProperty(baseKey, "null");
-                }
-            } else {
-                boolean hasValidResolved = props.stringPropertyNames().stream()
-                        .anyMatch(k -> isValidResolvedKey(k, baseKey, innerKey, props));
-
-                if (!hasValidResolved) {
-                    System.err.println("Warning: Missing valid resolved key for pattern '" + baseKey + "{{" + innerKey + "}}'");
-                    String resolvedKey = baseKey + props.getProperty(innerKey, "default");
-                    props.setProperty(resolvedKey, "null");
-                }
-            }
-        }
-
-        return props;
+        // Validation as before
+        return validateProperties(props, keyPatterns);
     }
 }
-
-
-
-/*
-Purpose: Validates configuration properties against blueprint patterns
-
-Example Config (sample-config.properties):
-
-properties
-api_version=v1
-env=prod
-app=inventory
-Validation Process:
-
-Checks all keys match expected patterns from blueprint
-
-For nested patterns (env_ + app), verifies combined key exists (prod_inventory)
-
-Adds missing required keys with "null" values
-
-Replaces empty values with "null"
-
-Output Properties:
-
-properties
-api_version=v1
-env=prod
-app=inventory
-prod_inventory=null  // Auto-added missing resolved key
-
- */
